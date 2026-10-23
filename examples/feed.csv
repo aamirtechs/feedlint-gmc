@@ -1,0 +1,6 @@
+id,title,description,link,image_link,availability,price,condition,brand,gtin
+SKU-001,Blue Widget,A sturdy blue widget,https://example.com/products/blue-widget,https://example.com/images/blue.jpg,in_stock,19.99 USD,new,Acme,4006381333931
+SKU-002,Red Widget,A sturdy red widget,https://example.com/products/red-widget,https://example.com/images/red.jpg,in stock,24.99 USD,brand new,Generic,5901234123457
+SKU-003,Green Widget,,https://example.com/products/green-widget,https://example.com/images/green.jpg,out_of_stock,14.99 USD,used,N/A,4006381333931
+SKU-004,Yellow Widget,A yellow widget,https://example.com/products/yellow-widget,https://example.com/images/yellow.jpg,preorder,29.99 USD,new,Acme,4006381333932
+SKU-005,Purple Widget,A purple widget,https://example.com/products/purple-widget,,backorder,9.99 USD,refurbished,Unknown,12345

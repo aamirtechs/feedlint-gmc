@@ -1,0 +1,19 @@
+{
+  "name": "feedlint-gmc",
+  "version": "1.0.0",
+  "description": "Validate a Google Merchant Center product feed (CSV or TSV) locally against the rules that get products disapproved: GTIN checksum and duplicates, required attributes, invalid condition or availability values, and placeholder brands. Outputs an errors CSV and a Markdown report.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "feedlint-gmc": "src/cli.js"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [],
+  "author": "Amir Hussain"
+}
