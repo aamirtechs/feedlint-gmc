@@ -1,5 +1,6 @@
 # feedlint-gmc
 Live page: https://aamirtechs.github.io/feedlint-gmc/
+Use it in your browser: the Pages site above runs the full tool locally, no install needed.
 
 Validate a Google Merchant Center product feed (CSV or TSV) locally against the rules that get products disapproved: GTIN checksum and duplicates, required attributes, invalid condition or availability values, and placeholder brands. Outputs an errors CSV and a Markdown report.
 

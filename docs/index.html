@@ -77,6 +77,26 @@ footer .links a{margin:0 10px}
   .grid{grid-template-columns:1fr}
 }
 </style>
+
+<style>
+.tool label{display:block;font-weight:600;margin:14px 0 6px;color:var(--navy)}
+.tool input[type=file]{width:100%;padding:12px;border:1.5px dashed #b9c6d4;border-radius:9px;background:#fbfcfe;font:inherit}
+.tool textarea{width:100%;min-height:110px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-family:Consolas,'Liberation Mono',monospace;font-size:13.5px;background:#fff}
+.tool select{padding:9px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;background:#fff}
+.tool .row{display:flex;gap:14px;flex-wrap:wrap}
+.tool .row>div{flex:1;min-width:200px}
+button.go{background:var(--gold);color:#171106;border:0;font:inherit;font-weight:700;padding:12px 26px;border-radius:9px;cursor:pointer;margin-top:16px}
+button.go:hover{background:var(--gold2)}
+button.dl{background:var(--navy);color:#fff;border:0;font:inherit;font-weight:600;padding:10px 18px;border-radius:9px;cursor:pointer;margin:10px 8px 0 0}
+#status{margin-top:14px;font-weight:600}
+#status.error{color:#b3261e}
+pre.out{max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.dragover{outline:3px solid var(--gold);outline-offset:4px}
+.hidden{display:none}
+.check{display:flex;gap:8px;align-items:center;font-weight:600;margin-top:14px}
+.check input{width:18px;height:18px}
+ul.counts{margin:10px 0 0 18px}
+</style>
 </head>
 <body>
 <header class="hero">
@@ -86,28 +106,96 @@ footer .links a{margin:0 10px}
   <a class="btn" href="https://github.com/aamirtechs/feedlint-gmc">View source on GitHub</a>
 </header>
 <main class="wrap">
-  <section>
-    <h2>What it does</h2>
-    <div class="grid">
-      <div class="card">GTIN format and mod-10 checksum validation, plus duplicate GTIN detection across the whole feed</div>
-      <div class="card">Required attributes checked per row: id, title, description, link, image_link, availability, price, condition and brand</div>
-      <div class="card">Availability and condition values checked against the allowed Merchant Center values</div>
-      <div class="card">Placeholder brand detection for values such as N/A, Generic and Unknown</div>
-      <div class="card">Writes errors.csv and a Markdown report, and exits with code 1 on errors so it can gate a CI job or a scheduled feed upload</div>
-    </div>
-  </section>
-  <section>
-    <h2>Install and usage</h2>
-    <p class="note">Requires Node.js 20 or later. There are no dependencies to install.</p>
-    <pre><code>git clone https://github.com/aamirtechs/feedlint-gmc.git
-cd feedlint-gmc
-node src/cli.js examples/feed.csv --out-dir out</code></pre>
-    <p class="note">This writes errors.csv and report.md to the output directory. Use --errors FILE and --report FILE to choose exact paths. Exit code is 1 when errors are found and 0 when the feed is clean.</p>
-  </section>
+
+<section class="tool" id="tool">
+  <h2>Use it in your browser</h2>
+  <p class="note">Runs fully in your browser, files never leave your device. Drop a CSV or TSV feed file below, or paste its contents, then run the same checks the CLI runs: required attributes, GTIN format, checksum and duplicates, availability and condition values, and placeholder brands.</p>
+  <label for="file">Feed file (.csv or .tsv)</label>
+  <input type="file" id="file" accept=".csv,.tsv,.txt">
+  <p class="note" id="dropName">You can also drag and drop the file anywhere on this panel.</p>
+  <label for="paste">Or paste feed contents</label>
+  <textarea id="paste" placeholder="id,title,description,link,image_link,availability,price,condition,brand,gtin"></textarea>
+  <button class="go" id="run">Validate feed</button>
+  <div id="status" role="status"></div>
+  <ul class="counts" id="counts"></ul>
+  <div id="downloads"></div>
+</section>
+<section id="reportWrap" class="hidden">
+  <h2>Report (report.md)</h2>
+  <pre class="out" id="report"></pre>
+</section>
+
 </main>
 <footer>
   <p>Built by Amir Hussain, operations manager and founder of AamirTechs.</p>
   <p class="links"><a href="https://aamirtechs.com">AamirTechs: operations, customer support and e-commerce services</a> <a href="https://github.com/aamirtechs">More open source tools</a></p>
 </footer>
+<script src="app.js"></script>
+<script>
+(function () {
+
+function download(name, text, type) {
+  var blob = new Blob([text], { type: type || 'text/plain;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+}
+function makeDl(label, name, text, type) {
+  var b = document.createElement('button'); b.className = 'dl'; b.textContent = label;
+  b.addEventListener('click', function () { download(name, text, type); });
+  return b;
+}
+function wireDrop(zone, input, store) {
+  zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', function () { zone.classList.remove('dragover'); });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault(); zone.classList.remove('dragover');
+    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    store.file = f;
+    try { var dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; } catch (err) {}
+    var note = document.getElementById('dropName');
+    if (note) note.textContent = 'Loaded file: ' + f.name;
+  });
+}
+async function readInput(store, input, textarea) {
+  var f = store.file || (input.files && input.files[0]);
+  if (f) return { text: await f.text(), name: f.name };
+  return { text: textarea.value, name: '' };
+}
+
+var store = {};
+wireDrop(document.getElementById('tool'), document.getElementById('file'), store);
+document.getElementById('run').addEventListener('click', async function () {
+  var status = document.getElementById('status');
+  var downloads = document.getElementById('downloads');
+  var countsEl = document.getElementById('counts');
+  var reportWrap = document.getElementById('reportWrap');
+  status.className = ''; status.textContent = ''; downloads.innerHTML = ''; countsEl.innerHTML = ''; reportWrap.classList.add('hidden');
+  try {
+    var input = await readInput(store, document.getElementById('file'), document.getElementById('paste'));
+    if (!input.text.trim()) { status.className = 'error'; status.textContent = 'Choose a feed file or paste feed contents first.'; return; }
+    var api = window.FeedlintGmc;
+    var result = api.validateFeedText(input.text);
+    var lines = ['row,id,rule,message,fix'];
+    result.errors.forEach(function (e) { lines.push([e.row, e.id, e.rule, e.message, e.fix].map(api.escapeCsv).join(',')); });
+    var errorsCsv = lines.join('\n') + '\n';
+    var report = api.buildReport(result);
+    status.textContent = 'Checked ' + result.totalRows + ' rows, found ' + result.errors.length + ' errors. Status: ' + (result.errors.length ? 'FAIL' : 'PASS');
+    var counts = {};
+    result.errors.forEach(function (e) { counts[e.rule] = (counts[e.rule] || 0) + 1; });
+    Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).forEach(function (rule) {
+      var li = document.createElement('li'); li.textContent = rule + ': ' + counts[rule]; countsEl.appendChild(li);
+    });
+    downloads.appendChild(makeDl('Download errors.csv', 'errors.csv', errorsCsv, 'text/csv;charset=utf-8'));
+    downloads.appendChild(makeDl('Download report.md', 'report.md', report, 'text/markdown;charset=utf-8'));
+    document.getElementById('report').textContent = report;
+    reportWrap.classList.remove('hidden');
+  } catch (e) { status.className = 'error'; status.textContent = e.message; }
+});
+
+})();
+</script>
 </body>
 </html>
